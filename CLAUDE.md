@@ -6,7 +6,7 @@
 
 **Amazon 跨境電商成本分析計算機**，單檔前端、無後端、無序號授權。來源是使用者提供的參考檔 `C:\Users\mark_\SynologyDrive\簡報資料\2023\輔仁大學\h2\參考資料\AMAZON-3-成本分析表.xlsx`（「Amazon平台賣價推估售價對應成本計算表」，分 FBM型／FBA型 兩張工作表，各自平行計算 USD／JPY 欄位），2026-09-03 依使用者要求做成互動網站，型態仿 `資料儀表板/restaurant-feasibility-calculator`（即時試算＋健康帶判色＋內建範例＋BYOK AI診斷）。
 
-**目前僅為本機工具，未上線 GitHub Pages、未建公開 repo**（來源 Excel 標註「資料來源：展貿科技有限公司」屬於真實公司的營運參數，只沿用其計算方法論，內建 5 組範例已全部改為虛構品類；是否要對外公開待日後另行決定）。
+來源 Excel 標註「資料來源：展貿科技有限公司」屬於真實公司的營運參數，只沿用其計算方法論，內建範例已全部改為虛構品類，不含真實公司名稱或數字。2026-09-03 應使用者要求推公開 GitHub repo 並上線 GitHub Pages：<https://m255525.github.io/amazon-cost-calculator/>。
 
 ## 與來源 Excel 的關係與差異
 
@@ -57,6 +57,10 @@
 - 主要互動按鈕（操作手冊/匯出PDF/頭程運費小工具按鈕/AI角度按鈕/規則式健檢按鈕/重設按鈕）統一 `min-height:44px`（符合行動裝置建議的最小觸控目標）；「請AI診斷」主按鈕改滿版寬 `width:100%`，AI診斷區的兩顆動作按鈕改直式排列（`.ai-actions{flex-direction:column}`）避免手機上並排擠壓。
 - 頭程運費小工具在手機版改直式排列（`.ft-row{flex-direction:column}`），輸入框滿版寬，中間「÷」符號直式排列下不適用故隱藏（`.freight-tool span{display:none}`）。
 - 已用 Playwright 在 360px／375px 寬度驗證：無橫向溢出、上述按鈕實測高度皆 ≥44px、桌機寬度（1440px）下確認這些規則不生效、版面維持原樣。
+
+## 部署
+
+2026-09-03 已推公開 GitHub repo：<https://github.com/M255525/amazon-cost-calculator>，用 `.github/workflows/deploy-pages.yml`（Actions 部署模式，比照 `workspace-git-repos` 記載的「不要用 legacy branch-source」慣例）啟用 GitHub Pages：<https://m255525.github.io/amazon-cost-calculator/>。Pages 的 build source 是用 `gh api repos/M255525/amazon-cost-calculator/pages -X POST -f build_type=workflow` 設定的（新建的 repo 預設沒有啟用 Pages，光推 workflow 檔案不會自動啟用，第一次要跑這道 API 呼叫；之後每次 push 到 `master` 都會自動重新部署）。
 
 ## 指令
 
