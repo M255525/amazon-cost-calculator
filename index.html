@@ -178,6 +178,25 @@ footer .reset-btn:hover{border-color:var(--amazon);}
 
 :focus-visible{outline:3px solid var(--amazon);outline-offset:2px;}
 
+/* ---------- Mobile tuning ---------- */
+@media (max-width:600px){
+  .hero{padding:36px 0 26px;}
+  .hero-utility{justify-content:center;}
+  .mode-switch{padding:14px 16px;}
+  .ms-btns{width:100%;}
+  .ms-btn{flex:1;font-size:.8rem;padding:11px 8px;min-height:46px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.3;}
+  .hero-util-btn,.freight-tool button,.ai-prompt-btn,.btn-secondary,footer .reset-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+  .btn-primary{min-height:48px;width:100%;text-align:center;justify-content:center;}
+  .ai-actions{flex-direction:column;align-items:stretch;}
+  .ai-actions .btn-secondary{width:100%;text-align:center;}
+  .freight-tool .ft-row{flex-direction:column;align-items:stretch;}
+  .freight-tool input[type=number]{width:100%;}
+  .freight-tool span{display:none;}
+  .result-cards{gap:10px;}
+  .var-card input[type=range]{height:30px;}
+  footer .footer-row{justify-content:center;text-align:center;}
+}
+
 /* ---------- Top marquee ---------- */
 #marqueeBar{position:fixed;top:0;left:0;right:0;height:30px;background:var(--bg);border-bottom:1px solid #33456A;z-index:2100;overflow:hidden;display:none;align-items:center;}
 #marqueeBar.show{display:flex;}
