@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amazon 成本分析計算機</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1220;
+  --bg2:#101B31;
+  --paper:#F7F5EF;
+  --ledger:#FBF8EF;
+  --ink:#1A2233;
+  --ink-soft:#4B5468;
+  --line:#DCD6C4;
+  --amazon:#FF9900;
+  --usd:#2C5DE5;
+  --usd-soft:#E9EEFD;
+  --jpy:#D6455C;
+  --jpy-soft:#FBEAEC;
+  --good:#1F8A5F;
+  --good-bg:#E4F3EC;
+  --warn:#B98A1F;
+  --warn-bg:#FBF1DC;
+  --bad:#C23B32;
+  --bad-bg:#FBEAE8;
+  --font-display:'Big Shoulders Display',sans-serif;
+  --font-heading:'Noto Sans TC',sans-serif;
+  --font-body:'Noto Sans TC',sans-serif;
+  --font-mono:'JetBrains Mono','Noto Sans TC',monospace;
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);line-height:1.6;overflow-x:hidden;}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px;}
+
+/* ---------- Hero ---------- */
+.hero{background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);color:#EAF0FB;padding:52px 0 40px;}
+.eyebrow{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:#8FA3C7;margin:0 0 14px;}
+.hero h1{font-family:var(--font-heading);font-weight:900;font-size:clamp(1.8rem,4vw,2.9rem);line-height:1.28;margin:0 0 12px;}
+.hero h1 .accent{color:var(--amazon);}
+.hero .sub{font-size:clamp(.95rem,1.5vw,1.08rem);color:#C3CEE0;max-width:52em;margin:0 0 28px;}
+
+.mode-switch{display:flex;flex-wrap:wrap;gap:14px;align-items:center;background:rgba(255,255,255,.05);border:1px solid #2B3B5B;border-radius:10px;padding:16px 18px;margin-bottom:0;}
+.mode-switch .ms-label{font-family:var(--font-heading);font-weight:700;font-size:.9rem;color:#EAF0FB;margin-right:4px;}
+.ms-btns{display:inline-flex;border-radius:999px;overflow:hidden;border:1px solid #3A4E76;}
+.ms-btn{font-family:var(--font-heading);font-weight:700;font-size:.86rem;padding:9px 20px;background:transparent;color:#C3CEE0;border:none;cursor:pointer;}
+.ms-btn.active{background:var(--amazon);color:#241900;}
+.ms-note{font-size:.8rem;color:#9AAAC7;}
+
+/* ---------- Sections ---------- */
+section{padding:44px 0;}
+section.alt{background:#fff;}
+.section-head{margin-bottom:22px;}
+.section-head .kicker{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amazon);margin:0 0 6px;}
+.section-head h2{font-family:var(--font-heading);font-weight:900;font-size:1.5rem;margin:0 0 8px;color:var(--ink);}
+.section-head p{margin:0;color:var(--ink-soft);max-width:56em;font-size:.94rem;}
+
+/* ---------- Presets ---------- */
+.preset-lead{font-size:.9rem;color:var(--ink-soft);margin:0 0 14px;max-width:56em;}
+.preset-row{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;margin-bottom:8px;}
+.preset-btn{flex:0 0 auto;width:186px;display:flex;flex-direction:column;gap:5px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:13px 14px;cursor:pointer;font-family:var(--font-body);}
+.preset-btn:hover{border-color:var(--amazon);}
+.preset-btn.active{border-color:var(--amazon);box-shadow:0 0 0 2px rgba(255,153,0,.28);background:#FFFAF0;}
+.preset-btn .p-emoji{font-size:1.35rem;line-height:1;}
+.preset-btn .p-label{font-family:var(--font-heading);font-weight:700;font-size:.9rem;color:var(--ink);}
+.preset-btn .p-blurb{font-size:.74rem;color:#6A6555;line-height:1.45;}
+
+/* ---------- Shared assumptions ---------- */
+.var-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+.var-card{border:1px solid var(--line);border-radius:6px;padding:15px 17px;background:#fff;}
+.var-card .var-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
+.var-card label{font-family:var(--font-heading);font-weight:700;font-size:.88rem;color:var(--ink);}
+.var-card .var-value{font-family:var(--font-mono);font-weight:600;font-size:.88rem;color:var(--ink);white-space:nowrap;background:#F0EEE4;padding:1px 8px;border-radius:4px;}
+.var-card input[type=range]{width:100%;accent-color:var(--amazon);margin:8px 0 4px;}
+.var-card .var-minmax{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.68rem;color:#9A947F;margin-bottom:6px;}
+.var-card .var-desc{font-size:.78rem;color:#6A6555;margin:0;}
+.var-card.disabled-note{color:var(--bad);font-size:.72rem;font-family:var(--font-mono);margin-top:4px;}
+
+/* ---------- Market panels ---------- */
+.market-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+@media (max-width:900px){.market-grid{grid-template-columns:1fr;}}
+.market-card{border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff;}
+.market-head{padding:16px 20px;color:#fff;display:flex;align-items:center;gap:10px;}
+.market-head.usd{background:var(--usd);}
+.market-head.jpy{background:var(--jpy);}
+.market-head .flag{font-size:1.4rem;}
+.market-head h3{margin:0;font-family:var(--font-heading);font-weight:900;font-size:1.05rem;}
+.market-head p{margin:2px 0 0;font-size:.78rem;opacity:.9;}
+.market-body{padding:18px 20px;}
+.market-vargrid{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:18px;}
+
+.freight-tool{border:1px dashed var(--line);border-radius:6px;padding:12px 14px;margin:6px 0 18px;background:#FAFAF6;}
+.freight-tool .ft-title{font-family:var(--font-heading);font-weight:700;font-size:.82rem;margin:0 0 8px;color:var(--ink);}
+.freight-tool .ft-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.freight-tool input[type=number]{width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:5px;font-family:var(--font-mono);font-size:.84rem;}
+.freight-tool button{font-family:var(--font-heading);font-weight:700;font-size:.78rem;background:var(--ink);color:#fff;border:none;border-radius:5px;padding:8px 14px;cursor:pointer;}
+.freight-tool button:hover{background:var(--amazon);color:#241900;}
+.freight-tool .ft-hint{font-size:.72rem;color:#8A8570;margin-top:6px;}
+
+/* ---------- Waterfall ledger ---------- */
+.ledger{background:var(--ledger);border:1px solid var(--line);border-radius:6px;padding:16px 18px;font-family:var(--font-mono);}
+.ledger-row{display:flex;justify-content:space-between;gap:10px;font-size:.82rem;padding:5px 0;border-bottom:1px dotted #D8CFB4;}
+.ledger-row .lg-label{color:#5A5340;}
+.ledger-row .lg-val{font-weight:600;white-space:nowrap;}
+.ledger-row.subtract .lg-val{color:var(--bad);}
+.ledger-row.subtotal{border-bottom:1px solid #C7BE9E;font-weight:700;}
+.ledger-row.final{border-bottom:none;border-top:2px solid var(--ink);margin-top:6px;padding-top:10px;}
+.ledger-row.final .lg-label{font-family:var(--font-heading);font-weight:900;color:var(--ink);font-size:.86rem;}
+.ledger-row.final .lg-val{font-family:var(--font-display);font-weight:800;font-size:1.15rem;}
+
+.result-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+.result-card{border-radius:6px;padding:14px 16px;text-align:center;}
+.result-card.high{background:var(--good-bg);}
+.result-card.low{background:var(--warn-bg);}
+.result-card .rc-label{font-size:.76rem;color:var(--ink-soft);margin:0 0 4px;}
+.result-card .rc-val{font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:var(--ink);}
+.margin-badge{display:inline-block;margin-top:14px;font-family:var(--font-mono);font-size:.78rem;padding:4px 12px;border-radius:999px;}
+.margin-badge.good{background:var(--good-bg);color:var(--good);}
+.margin-badge.warn{background:var(--warn-bg);color:var(--warn);}
+.margin-badge.bad{background:var(--bad-bg);color:var(--bad);}
+.warning-banner{background:var(--bad-bg);color:var(--bad);border:1px solid rgba(194,59,50,.3);border-radius:6px;padding:10px 14px;font-size:.84rem;margin-top:14px;font-weight:600;}
+
+/* ---------- AI card ---------- */
+.ai-card{background:var(--bg);color:#EAF0FB;border-radius:8px;padding:26px;}
+.ai-card h2{font-family:var(--font-heading);font-weight:900;font-size:1.25rem;margin:0 0 8px;}
+.ai-card p.lead{color:#C3CEE0;font-size:.9rem;margin:0 0 18px;max-width:52em;}
+.ai-settings{background:rgba(255,255,255,.06);border-radius:6px;padding:0;margin-bottom:18px;}
+.ai-settings summary{cursor:pointer;padding:14px 16px;font-family:var(--font-heading);font-weight:700;font-size:.86rem;list-style:none;}
+.ai-settings summary::-webkit-details-marker{display:none;}
+.ai-settings summary::before{content:"▸ ";color:var(--amazon);}
+.ai-settings[open] summary::before{content:"▾ ";}
+.ai-prompt-block{margin-bottom:16px;}
+.ai-prompt-label{font-size:.78rem;color:#A9B7D1;margin:0 0 8px;}
+.ai-prompt-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.ai-prompt-btn{font-family:var(--font-body);font-size:.78rem;background:rgba(255,255,255,.06);color:#EAF0FB;border:1px solid #33456A;border-radius:999px;padding:7px 14px;cursor:pointer;}
+.ai-prompt-btn:hover{border-color:var(--amazon);}
+.ai-extra{width:100%;padding:10px 12px;border-radius:6px;border:1px solid #33456A;background:#0F1A30;color:#EAF0FB;font-family:var(--font-body);font-size:.85rem;resize:vertical;min-height:64px;box-sizing:border-box;}
+.ai-extra::placeholder{color:#6E7EA0;}
+.ai-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:0 16px 16px;}
+.ai-fields label{display:block;font-size:.76rem;color:#A9B7D1;margin-bottom:4px;}
+.ai-fields input,.ai-fields select{width:100%;padding:9px 10px;border-radius:4px;border:1px solid #33456A;background:#0F1A30;color:#EAF0FB;font-family:var(--font-body);font-size:.86rem;}
+.ai-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.btn-primary{font-family:var(--font-heading);font-weight:700;font-size:.9rem;background:var(--amazon);color:#241900;border:none;border-radius:999px;padding:12px 26px;cursor:pointer;}
+.btn-primary:disabled{opacity:.55;cursor:progress;}
+.btn-secondary{font-family:var(--font-heading);font-weight:700;font-size:.86rem;background:transparent;color:#EAF0FB;border:1px solid #33456A;border-radius:999px;padding:11px 20px;cursor:pointer;}
+.ai-status{font-size:.82rem;padding:4px 0;}
+.ai-status.status-ok{color:#8FE0B3;}
+.ai-status.status-err{color:#F0A597;}
+.ai-status.status-info{color:#A9B7D1;}
+.ai-result{margin-top:18px;background:#fff;color:var(--ink);border-radius:6px;padding:20px 22px;font-size:.92rem;line-height:1.75;white-space:pre-wrap;display:none;}
+.ai-result.show{display:block;}
+.ai-result .ai-badge{display:inline-block;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.08em;padding:2px 9px;border-radius:999px;margin-bottom:10px;}
+.ai-badge.mode-ai{background:var(--good-bg);color:var(--good);}
+.ai-badge.mode-rule{background:#EEE;color:#5A5850;}
+
+/* ---------- Footer ---------- */
+footer{background:var(--bg);color:#A9B7D1;padding:28px 0;font-size:.78rem;}
+footer .wrap{display:flex;flex-direction:column;gap:12px;}
+footer .disclaimer{max-width:64em;}
+footer .footer-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;}
+footer .footer-links a{color:#A9B7D1;}
+footer .reset-btn{background:transparent;color:#EAF0FB;border:1px solid #33456A;border-radius:999px;padding:8px 16px;cursor:pointer;font-family:var(--font-body);font-size:.78rem;}
+footer .reset-btn:hover{border-color:var(--amazon);}
+
+:focus-visible{outline:3px solid var(--amazon);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Cross-Border E-commerce Cost Model</p>
+    <h1>Amazon <span class="accent">成本分析計算機</span></h1>
+    <p class="sub">從「期望售價」逐層回推平台手續費、FBA費用、當地稅務費用、退貨風險與金流手續費，換算台幣後扣除頭程運費，即時算出你能開給供應商的最高／最低採購價格。美國站（USD）與日本站（JPY）並排試算，所有參數皆可自行調整。</p>
+    <div class="mode-switch">
+      <span class="ms-label">出貨模式</span>
+      <div class="ms-btns" id="modeBtns" role="group" aria-label="出貨模式"></div>
+      <span class="ms-note" id="modeNote"></span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Quick Start</p>
+      <h2>快速範例</h2>
+      <p>先選一個貼近你商品品類的範例套用假設（皆為虛構情境，非真實客戶資料），下方所有欄位會自動更新，再依實際狀況微調。</p>
+    </div>
+    <div class="preset-row" id="presetRow" role="group" aria-label="商品品類範例"></div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Shared Assumptions</p>
+      <h2>共用假設：採購安全margin</h2>
+      <p>扣完頭程運費後的台幣淨額，依這兩個margin算出「最高／最低可以開給供應商的採購價格」——margin留得越多，代表留給自己的安全利潤空間越大，能接受的採購成本上限就越低。</p>
+    </div>
+    <div class="var-grid" id="globalGrid"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Waterfall</p>
+      <h2>美國站 × 日本站 並排試算</h2>
+      <p>逐層扣除清單（瀑布）即時反映左側滑桿的調整。紅字＝從上一步淨額扣除的費用；最下面兩張卡片是最終建議採購價格區間。</p>
+    </div>
+    <div class="market-grid">
+      <div class="market-card">
+        <div class="market-head usd"><span class="flag">🇺🇸</span><div><h3>美國站（USD）</h3><p>Amazon.com</p></div></div>
+        <div class="market-body">
+          <div class="market-vargrid" id="varGridUSD"></div>
+          <div class="freight-tool">
+            <p class="ft-title">頭程運費小工具（選用）</p>
+            <div class="ft-row">
+              <input type="number" id="ftTotalUSD" placeholder="總運費(TWD)" min="0">
+              <span>÷</span>
+              <input type="number" id="ftUnitsUSD" placeholder="件數" min="1">
+              <button type="button" id="ftApplyUSD">帶入每件運費</button>
+            </div>
+            <p class="ft-hint">計算「每件頭程運費」＝總運費 ÷ 件數，按下後自動填入上方滑桿。</p>
+          </div>
+          <div class="ledger" id="ledgerUSD"></div>
+          <div class="result-cards">
+            <div class="result-card high"><p class="rc-label">預估最高採購價格 (TWD)</p><p class="rc-val" id="maxPriceUSD">$0</p></div>
+            <div class="result-card low"><p class="rc-label">預估最低採購價格 (TWD)</p><p class="rc-val" id="minPriceUSD">$0</p></div>
+          </div>
+          <div id="marginBadgeUSD"></div>
+          <div id="warningUSD"></div>
+        </div>
+      </div>
+
+      <div class="market-card">
+        <div class="market-head jpy"><span class="flag">🇯🇵</span><div><h3>日本站（JPY）</h3><p>Amazon.co.jp</p></div></div>
+        <div class="market-body">
+          <div class="market-vargrid" id="varGridJPY"></div>
+          <div class="freight-tool">
+            <p class="ft-title">頭程運費小工具（選用）</p>
+            <div class="ft-row">
+              <input type="number" id="ftTotalJPY" placeholder="總運費(TWD)" min="0">
+              <span>÷</span>
+              <input type="number" id="ftUnitsJPY" placeholder="件數" min="1">
+              <button type="button" id="ftApplyJPY">帶入每件運費</button>
+            </div>
+            <p class="ft-hint">計算「每件頭程運費」＝總運費 ÷ 件數，按下後自動填入上方滑桿。</p>
+          </div>
+          <div class="ledger" id="ledgerJPY"></div>
+          <div class="result-cards">
+            <div class="result-card high"><p class="rc-label">預估最高採購價格 (TWD)</p><p class="rc-val" id="maxPriceJPY">$0</p></div>
+            <div class="result-card low"><p class="rc-label">預估最低採購價格 (TWD)</p><p class="rc-val" id="minPriceJPY">$0</p></div>
+          </div>
+          <div id="marginBadgeJPY"></div>
+          <div id="warningJPY"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="ai-card">
+      <h2>請 AI 診斷目前的定價與採購策略</h2>
+      <p class="lead">把目前的試算結果整理後，請語言模型針對 Amazon 跨境電商定價與採購策略給診斷與建議。沒有金鑰也能用——會改用規則式健檢，直接標出風險項目。</p>
+      <div class="ai-prompt-block">
+        <p class="ai-prompt-label">診斷角度（選用，點選帶入範本、或自行編輯——只影響 AI 診斷，規則式健檢固定套用通用邏輯）</p>
+        <div class="ai-prompt-row" id="aiPromptRow"></div>
+        <textarea id="aiExtra" class="ai-extra" rows="3" placeholder="留空＝一般整體健檢。也可以點上面的按鈕帶入範本，或自己輸入想請 AI 特別關注的角度。"></textarea>
+      </div>
+      <details class="ai-settings" id="aiSettings">
+        <summary>AI 診斷設定（選用，需自備 API 金鑰）</summary>
+        <div class="ai-fields">
+          <div><label for="aiProvider">服務商</label><select id="aiProvider"></select></div>
+          <div><label for="aiModel">模型 ID</label><input type="text" id="aiModel" autocomplete="off"></div>
+          <div><label for="aiKey">API 金鑰</label><input type="password" id="aiKey" autocomplete="off" placeholder="只存在你的瀏覽器本機"></div>
+        </div>
+      </details>
+      <div class="ai-actions">
+        <button class="btn-primary" id="aiDiagnoseBtn" type="button">請 AI 診斷目前的方案</button>
+        <button class="btn-secondary" id="ruleDiagnoseBtn" type="button">改用規則式健檢（不需金鑰）</button>
+        <span class="ai-status" id="aiStatus"></span>
+      </div>
+      <div class="ai-result" id="aiResult">
+        <span class="ai-badge" id="aiBadge"></span>
+        <div id="aiResultText"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disclaimer">
+      <strong>使用警語：</strong>本工具僅供跨境電商定價與採購成本的初步試算參考，所有數字皆為依你目前設定推算的估計值，非正式財務報表或專業意見，不能取代會計師、稅務顧問或實際供應鏈報價。變數設定、AI 診斷內容與 API 金鑰皆只存在你的瀏覽器本機，不會上傳到任何伺服器；填入 API 金鑰並按下「請 AI 診斷」時，你的試算資料會直接送到你選擇的服務商官方 API。內建範例皆為虛構情境，非真實客戶資料。
+    </div>
+    <div class="footer-row">
+      <span>製作：Mark Tsai｜<a href="mailto:tsaimark@gmail.com" style="color:#A9B7D1;">tsaimark@gmail.com</a></span>
+      <span class="footer-links"><button class="reset-btn" id="resetBtn" type="button">重設為基準假設</button></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var STATE_KEY = "amazonCostCalcState";
+  var API_KEY = "amazonCostCalcApiConfig";
+  var PRESET_KEY = "amazonCostCalcActivePreset";
+
+  /* ---------- Variable definitions ---------- */
+  var VAR_DEFS = [
+    {id:"highMarginPct", group:"global", label:"最高採購價安全margin", unit:"%", min:0, max:50, step:1, def:15, pct:true,
+      desc:"扣完運費後的台幣淨額，保留這個比例當安全利潤，剩下的就是可以開給供應商的「最高」採購價格。"},
+    {id:"lowMarginPct", group:"global", label:"最低採購價安全margin", unit:"%", min:0, max:60, step:1, def:30, pct:true,
+      desc:"保留更高比例的margin，得到更保守的「最低」採購價格——當作議價下限或風險情境的下界。"},
+
+    {id:"priceUSD", group:"usd", label:"期望售價", unit:"USD", min:5, max:300, step:0.5, def:29.99,
+      desc:"這件商品在 Amazon.com 上架的期望售價。"},
+    {id:"platformFeeRateUSD", group:"usd", label:"平台手續費率", unit:"%", min:5, max:40, step:0.5, def:15, pct:true,
+      desc:"Amazon referral fee，多數分類約 15%，部分特殊分類（如珠寶、媒體）會不同，請依實際分類確認。"},
+    {id:"fbaFeeUSD", group:"usd", label:"FBA費用（每件）", unit:"USD", min:0, max:20, step:0.1, def:4.5,
+      desc:"Amazon倉儲揀貨出貨費用，只有出貨模式為 FBA 時才會計入試算；FBM（自行出貨）此欄不套用。"},
+    {id:"localFeeRateUSD", group:"usd", label:"當地稅務／雜費率", unit:"%", min:0, max:20, step:0.5, def:6, pct:true,
+      desc:"州稅、VAT、進口關稅、匯差等雜項費用估算，基於上一步（扣完FBA費用後）的淨額計算。"},
+    {id:"returnRiskRateUSD", group:"usd", label:"退貨風險率", unit:"%", min:0, max:15, step:0.5, def:4, pct:true,
+      desc:"預留給退貨、換貨造成的損失，基於原始期望售價計算，抓保守一點比較安全。"},
+    {id:"paymentFeeRateUSD", group:"usd", label:"金流手續費率", unit:"%", min:0, max:2, step:0.05, def:0.3, pct:true,
+      desc:"跨境收款平台（如 Payoneer）的提現手續費率，通常可與平台每半年重談比例。"},
+    {id:"exchangeRateUSD", group:"usd", label:"美元兌台幣匯率", unit:"TWD/USD", min:25, max:35, step:0.05, def:31.5,
+      desc:"換算實收金額用的匯率，建議從嚴（抓較低的美元價）才不會高估獲利。"},
+    {id:"freightPerUnitUSD", group:"usd", label:"每件頭程運費", unit:"TWD", min:0, max:2000, step:10, def:300,
+      desc:"從台灣/產地運到美國倉庫的頭程運費，均攤到每一件商品。可用下方小工具用「總運費÷件數」算出。"},
+
+    {id:"priceJPY", group:"jpy", label:"期望售價", unit:"JPY", min:100, max:20000, step:50, def:1500,
+      desc:"這件商品在 Amazon.co.jp 上架的期望售價。"},
+    {id:"platformFeeRateJPY", group:"jpy", label:"平台手續費率", unit:"%", min:5, max:40, step:0.5, def:15, pct:true,
+      desc:"Amazon日本站的販売手数料，多數分類約15%，請依實際分類確認。"},
+    {id:"fbaFeeJPY", group:"jpy", label:"FBA費用（每件）", unit:"JPY", min:0, max:1000, step:10, def:350,
+      desc:"Amazon倉儲揀貨出貨費用，只有出貨模式為 FBA 時才會計入試算；FBM（自行出貨）此欄不套用。"},
+    {id:"localFeeRateJPY", group:"jpy", label:"當地稅務／雜費率", unit:"%", min:0, max:20, step:0.5, def:6, pct:true,
+      desc:"消費稅、進口關稅、匯差等雜項費用估算，基於上一步（扣完FBA費用後）的淨額計算。"},
+    {id:"returnRiskRateJPY", group:"jpy", label:"退貨風險率", unit:"%", min:0, max:15, step:0.5, def:4, pct:true,
+      desc:"預留給退貨、換貨造成的損失，基於原始期望售價計算。"},
+    {id:"paymentFeeRateJPY", group:"jpy", label:"金流手續費率", unit:"%", min:0, max:2, step:0.05, def:0.3, pct:true,
+      desc:"跨境收款平台的提現手續費率。"},
+    {id:"exchangeRateJPY", group:"jpy", label:"日圓兌台幣匯率", unit:"TWD/JPY", min:0.15, max:0.3, step:0.005, def:0.21,
+      desc:"換算實收金額用的匯率，建議從嚴（抓較低的日圓價）才不會高估獲利。"},
+    {id:"freightPerUnitJPY", group:"jpy", label:"每件頭程運費", unit:"TWD", min:0, max:2000, step:10, def:150,
+      desc:"從台灣/產地運到日本倉庫的頭程運費，均攤到每一件商品。可用下方小工具用「總運費÷件數」算出。"}
+  ];
+
+  var PRESETS = [
+    {id:"home", emoji:"🗄️", label:"居家收納用品", blurb:"中等單價、標準尺寸，FBA為主流出貨方式。",
+      overrides:{fulfillmentMode:"FBA", priceUSD:24.99, platformFeeRateUSD:15, fbaFeeUSD:5.2, localFeeRateUSD:5, returnRiskRateUSD:3, exchangeRateUSD:31.5, freightPerUnitUSD:350,
+        priceJPY:2600, platformFeeRateJPY:15, fbaFeeJPY:380, localFeeRateJPY:5, returnRiskRateJPY:3, exchangeRateJPY:0.21, freightPerUnitJPY:160,
+        highMarginPct:15, lowMarginPct:30}},
+    {id:"gadget", emoji:"📱", label:"3C手機配件", blurb:"低單價高週轉，但電子類退貨率通常偏高。",
+      overrides:{fulfillmentMode:"FBA", priceUSD:15.99, platformFeeRateUSD:15, fbaFeeUSD:3.8, localFeeRateUSD:5, returnRiskRateUSD:6, exchangeRateUSD:31.5, freightPerUnitUSD:200,
+        priceJPY:1800, platformFeeRateJPY:15, fbaFeeJPY:300, localFeeRateJPY:5, returnRiskRateJPY:6, exchangeRateJPY:0.21, freightPerUnitJPY:90,
+        highMarginPct:15, lowMarginPct:30}},
+    {id:"camping", emoji:"⛺", label:"戶外露營用品", blurb:"體積大、單價高，常見以FBM自行出貨控制物流成本。",
+      overrides:{fulfillmentMode:"FBM", priceUSD:89.99, platformFeeRateUSD:15, fbaFeeUSD:9, localFeeRateUSD:7, returnRiskRateUSD:5, exchangeRateUSD:31.5, freightPerUnitUSD:1200,
+        priceJPY:9800, platformFeeRateJPY:15, fbaFeeJPY:700, localFeeRateJPY:7, returnRiskRateJPY:5, exchangeRateJPY:0.21, freightPerUnitJPY:600,
+        highMarginPct:18, lowMarginPct:32}},
+    {id:"pet", emoji:"🐾", label:"寵物用品", blurb:"回購率高、退貨率低，適合薄利多銷。",
+      overrides:{fulfillmentMode:"FBA", priceUSD:19.99, platformFeeRateUSD:15, fbaFeeUSD:4.2, localFeeRateUSD:5, returnRiskRateUSD:3, exchangeRateUSD:31.5, freightPerUnitUSD:250,
+        priceJPY:2200, platformFeeRateJPY:15, fbaFeeJPY:320, localFeeRateJPY:5, returnRiskRateJPY:3, exchangeRateJPY:0.21, freightPerUnitJPY:120,
+        highMarginPct:14, lowMarginPct:28}},
+    {id:"beauty", emoji:"💄", label:"美妝保養工具", blurb:"客單價較高，但退貨風險也偏高，需要保留較厚的margin。",
+      overrides:{fulfillmentMode:"FBA", priceUSD:34.99, platformFeeRateUSD:15, fbaFeeUSD:4.0, localFeeRateUSD:6, returnRiskRateUSD:8, exchangeRateUSD:31.5, freightPerUnitUSD:280,
+        priceJPY:3800, platformFeeRateJPY:15, fbaFeeJPY:310, localFeeRateJPY:6, returnRiskRateJPY:8, exchangeRateJPY:0.21, freightPerUnitJPY:140,
+        highMarginPct:18, lowMarginPct:34}}
+  ];
+  var activePresetId = null;
+
+  var state = {};
+  VAR_DEFS.forEach(function(v){ state[v.id] = v.def; });
+  state.fulfillmentMode = "FBA";
+
+  function loadState(){
+    try{
+      var saved = JSON.parse(localStorage.getItem(STATE_KEY));
+      if(saved){
+        Object.keys(saved).forEach(function(k){ if(k in state) state[k] = saved[k]; });
+      }
+    }catch(e){}
+    try{ activePresetId = localStorage.getItem(PRESET_KEY) || null; }catch(e){}
+  }
+  function persistState(){
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }catch(e){}
+    try{
+      if(activePresetId) localStorage.setItem(PRESET_KEY, activePresetId);
+      else localStorage.removeItem(PRESET_KEY);
+    }catch(e){}
+  }
+
+  function fmtInt(n){ return Math.round(n).toLocaleString("zh-TW"); }
+  function fmtMoney(n, decimals){
+    var d = decimals == null ? 0 : decimals;
+    return n.toLocaleString("zh-TW", {minimumFractionDigits:d, maximumFractionDigits:d});
+  }
+  function fmtPct(n){ return (Math.round(n*1000)/10).toFixed(1) + "%"; }
+
+  /* ---------- Fulfillment mode switch ---------- */
+  function buildModeUI(){
+    var row = $("modeBtns");
+    row.innerHTML = "";
+    [["FBA","FBA（Amazon倉儲配送）"],["FBM","FBM（賣家自行出貨）"]].forEach(function(pair){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ms-btn";
+      btn.textContent = pair[1];
+      btn.dataset.mode = pair[0];
+      btn.addEventListener("click", function(){
+        state.fulfillmentMode = pair[0];
+        persistState();
+        syncModeUI();
+        recalcAll();
+      });
+      row.appendChild(btn);
+    });
+    syncModeUI();
+  }
+  function syncModeUI(){
+    document.querySelectorAll(".ms-btn").forEach(function(btn){
+      btn.classList.toggle("active", btn.dataset.mode === state.fulfillmentMode);
+    });
+    $("modeNote").textContent = state.fulfillmentMode === "FBA"
+      ? "FBA費用欄位會計入試算。"
+      : "FBM模式：FBA費用欄位不會計入試算（可保留數字供之後切換參考）。";
+  }
+
+  /* ---------- Build slider UI ---------- */
+  function buildVarCard(v){
+    var card = document.createElement("div");
+    card.className = "var-card";
+    var top = document.createElement("div");
+    top.className = "var-top";
+    var label = document.createElement("label");
+    label.setAttribute("for", "in-" + v.id);
+    label.textContent = v.label;
+    var val = document.createElement("span");
+    val.className = "var-value";
+    val.id = "val-" + v.id;
+    top.appendChild(label); top.appendChild(val);
+    card.appendChild(top);
+
+    var input = document.createElement("input");
+    input.type = "range";
+    input.id = "in-" + v.id;
+    input.min = v.min; input.max = v.max; input.step = v.step;
+    input.value = state[v.id];
+    input.setAttribute("aria-describedby", "desc-" + v.id);
+    input.addEventListener("input", function(){
+      state[v.id] = parseFloat(input.value);
+      updateVarValue(v);
+      activePresetId = null;
+      syncPresetActiveUI();
+      persistState();
+      recalcAll();
+    });
+    card.appendChild(input);
+
+    var minmax = document.createElement("div");
+    minmax.className = "var-minmax";
+    minmax.innerHTML = "<span>" + v.min + "</span><span>" + v.max + "</span>";
+    card.appendChild(minmax);
+
+    var desc = document.createElement("p");
+    desc.className = "var-desc";
+    desc.id = "desc-" + v.id;
+    desc.textContent = v.desc;
+    card.appendChild(desc);
+
+    if(v.id === "fbaFeeUSD" || v.id === "fbaFeeJPY"){
+      var note = document.createElement("p");
+      note.className = "disabled-note";
+      note.id = "note-" + v.id;
+      card.appendChild(note);
+    }
+
+    return card;
+  }
+
+  function updateVarValue(v){
+    var el = $("val-" + v.id);
+    if(!el) return;
+    var n = state[v.id];
+    if(v.pct) el.textContent = n + "%";
+    else el.textContent = (n >= 1000 ? fmtInt(n) : n) + " " + v.unit;
+  }
+
+  function buildGrids(){
+    var globalGrid = $("globalGrid");
+    var usdGrid = $("varGridUSD");
+    var jpyGrid = $("varGridJPY");
+    globalGrid.innerHTML = ""; usdGrid.innerHTML = ""; jpyGrid.innerHTML = "";
+    VAR_DEFS.forEach(function(v){
+      var card = buildVarCard(v);
+      if(v.group === "global") globalGrid.appendChild(card);
+      else if(v.group === "usd") usdGrid.appendChild(card);
+      else if(v.group === "jpy") jpyGrid.appendChild(card);
+    });
+  }
+
+  function syncAllInputs(){
+    VAR_DEFS.forEach(function(v){
+      var input = $("in-" + v.id);
+      if(input) input.value = state[v.id];
+      updateVarValue(v);
+    });
+  }
+
+  /* ---------- Presets ---------- */
+  function buildPresetUI(){
+    var row = $("presetRow");
+    row.innerHTML = "";
+    PRESETS.forEach(function(p){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "preset-btn";
+      btn.dataset.presetId = p.id;
+      btn.innerHTML = '<span class="p-emoji">' + p.emoji + '</span><span class="p-label">' + p.label + '</span><span class="p-blurb">' + p.blurb + '</span>';
+      btn.addEventListener("click", function(){ applyPreset(p); });
+      row.appendChild(btn);
+    });
+    syncPresetActiveUI();
+  }
+  function syncPresetActiveUI(){
+    document.querySelectorAll(".preset-btn").forEach(function(btn){
+      btn.classList.toggle("active", btn.dataset.presetId === activePresetId);
+    });
+  }
+  function applyPreset(p){
+    Object.keys(p.overrides).forEach(function(k){ state[k] = p.overrides[k]; });
+    activePresetId = p.id;
+    persistState();
+    syncAllInputs();
+    syncModeUI();
+    syncPresetActiveUI();
+    recalcAll();
+  }
+
+  /* ---------- Freight helper ---------- */
+  function bindFreightTool(prefix, varId){
+    $("ftApply" + prefix).addEventListener("click", function(){
+      var total = parseFloat($("ftTotal" + prefix).value);
+      var units = parseFloat($("ftUnits" + prefix).value);
+      if(!isFinite(total) || !isFinite(units) || units <= 0) return;
+      var perUnit = Math.round(total / units);
+      state[varId] = perUnit;
+      var input = $("in-" + varId);
+      if(input) input.value = perUnit;
+      updateVarValue(VAR_DEFS.find(function(v){ return v.id === varId; }));
+      activePresetId = null;
+      syncPresetActiveUI();
+      persistState();
+      recalcAll();
+    });
+  }
+
+  /* ---------- Calculation engine ---------- */
+  function calcMarket(price, platformFeeRate, fbaFee, localFeeRate, returnRiskRate, paymentFeeRate, exchangeRate, freightPerUnitTWD, highMarginPct, lowMarginPct, fulfillmentMode){
+    var platformFeeAmt = price * platformFeeRate;
+    var netA = price - platformFeeAmt;
+    var fbaFeeApplied = fulfillmentMode === "FBA" ? fbaFee : 0;
+    var netB = netA - fbaFeeApplied;
+    var localFeeAmt = netB * localFeeRate;
+    var netC = netB - localFeeAmt;
+    var returnRiskAmt = price * returnRiskRate;
+    var platformNetProfit = netC - returnRiskAmt;
+    var paymentFeeAmt = platformNetProfit * paymentFeeRate;
+    var netReceived = platformNetProfit - paymentFeeAmt;
+    var netReceivedTWD = netReceived * exchangeRate;
+    var afterFreightTWD = netReceivedTWD - freightPerUnitTWD;
+    var maxPurchasePriceTWD = afterFreightTWD * (1 - highMarginPct);
+    var minPurchasePriceTWD = afterFreightTWD * (1 - lowMarginPct);
+    var profitMarginPct = price > 0 ? platformNetProfit / price : 0;
+    return {
+      price:price, platformFeeAmt:platformFeeAmt, netA:netA, fbaFeeApplied:fbaFeeApplied, netB:netB,
+      localFeeAmt:localFeeAmt, netC:netC, returnRiskAmt:returnRiskAmt, platformNetProfit:platformNetProfit,
+      paymentFeeAmt:paymentFeeAmt, netReceived:netReceived, netReceivedTWD:netReceivedTWD,
+      freightPerUnitTWD:freightPerUnitTWD, afterFreightTWD:afterFreightTWD,
+      maxPurchasePriceTWD:maxPurchasePriceTWD, minPurchasePriceTWD:minPurchasePriceTWD, profitMarginPct:profitMarginPct
+    };
+  }
+
+  function calculate(){
+    var s = state;
+    var usd = calcMarket(s.priceUSD, s.platformFeeRateUSD/100, s.fbaFeeUSD, s.localFeeRateUSD/100, s.returnRiskRateUSD/100,
+      s.paymentFeeRateUSD/100, s.exchangeRateUSD, s.freightPerUnitUSD, s.highMarginPct/100, s.lowMarginPct/100, s.fulfillmentMode);
+    var jpy = calcMarket(s.priceJPY, s.platformFeeRateJPY/100, s.fbaFeeJPY, s.localFeeRateJPY/100, s.returnRiskRateJPY/100,
+      s.paymentFeeRateJPY/100, s.exchangeRateJPY, s.freightPerUnitJPY, s.highMarginPct/100, s.lowMarginPct/100, s.fulfillmentMode);
+    return {usd:usd, jpy:jpy};
+  }
+
+  function marginState(pct){
+    if(pct >= 0.20) return "good";
+    if(pct >= 0.10) return "warn";
+    return "bad";
+  }
+
+  /* ---------- Render market ---------- */
+  function renderMarket(prefix, currencyLabel, res){
+    var rows = [
+      {label:"期望售價", val:currencyLabel + " " + fmtMoney(res.price, prefix==="USD"?2:0), cls:""},
+      {label:"－ 平台手續費", val:"－" + currencyLabel + " " + fmtMoney(res.platformFeeAmt, prefix==="USD"?2:0), cls:"subtract"},
+      {label:"＝ 淨額", val:currencyLabel + " " + fmtMoney(res.netA, prefix==="USD"?2:0), cls:"subtotal"},
+      {label:"－ FBA費用" + (res.fbaFeeApplied===0 ? "（FBM不套用）":""), val:"－" + currencyLabel + " " + fmtMoney(res.fbaFeeApplied, prefix==="USD"?2:0), cls:"subtract"},
+      {label:"＝ 淨額", val:currencyLabel + " " + fmtMoney(res.netB, prefix==="USD"?2:0), cls:"subtotal"},
+      {label:"－ 當地稅務／雜費", val:"－" + currencyLabel + " " + fmtMoney(res.localFeeAmt, prefix==="USD"?2:0), cls:"subtract"},
+      {label:"＝ 淨額", val:currencyLabel + " " + fmtMoney(res.netC, prefix==="USD"?2:0), cls:"subtotal"},
+      {label:"－ 退貨風險準備", val:"－" + currencyLabel + " " + fmtMoney(res.returnRiskAmt, prefix==="USD"?2:0), cls:"subtract"},
+      {label:"＝ 平台淨利", val:currencyLabel + " " + fmtMoney(res.platformNetProfit, prefix==="USD"?2:0), cls:"subtotal"},
+      {label:"－ 金流手續費", val:"－" + currencyLabel + " " + fmtMoney(res.paymentFeeAmt, prefix==="USD"?2:0), cls:"subtract"},
+      {label:"＝ 實收金額（" + currencyLabel + "）", val:currencyLabel + " " + fmtMoney(res.netReceived, prefix==="USD"?2:0), cls:"subtotal"},
+      {label:"× 匯率 ＝ 換算台幣", val:"NT$ " + fmtInt(res.netReceivedTWD), cls:""},
+      {label:"－ 頭程運費", val:"－NT$ " + fmtInt(res.freightPerUnitTWD), cls:"subtract"},
+      {label:"＝ 扣運費後淨額（TWD）", val:"NT$ " + fmtInt(res.afterFreightTWD), cls:"final"}
+    ];
+    var ledger = $("ledger" + prefix);
+    ledger.innerHTML = "";
+    rows.forEach(function(r){
+      var row = document.createElement("div");
+      row.className = "ledger-row " + r.cls;
+      row.innerHTML = '<span class="lg-label">' + r.label + '</span><span class="lg-val">' + r.val + "</span>";
+      ledger.appendChild(row);
+    });
+
+    $("maxPrice" + prefix).textContent = "NT$ " + fmtInt(res.maxPurchasePriceTWD);
+    $("minPrice" + prefix).textContent = "NT$ " + fmtInt(res.minPurchasePriceTWD);
+
+    var ms = marginState(res.profitMarginPct);
+    var badgeText = "平台淨利率 " + fmtPct(res.profitMarginPct) + "（" + (ms==="good"?"健康":ms==="warn"?"偏薄":"偏低") + "）";
+    $("marginBadge" + prefix).innerHTML = '<span class="margin-badge ' + ms + '">' + badgeText + '</span>';
+
+    var warnEl = $("warning" + prefix);
+    warnEl.innerHTML = "";
+    if(res.afterFreightTWD <= 0){
+      warnEl.innerHTML = '<div class="warning-banner">⚠ 運費已侵蝕全部收益，此定價在目前假設下無法採購。</div>';
+    } else if(res.minPurchasePriceTWD <= 0){
+      warnEl.innerHTML = '<div class="warning-banner">⚠ 安全margin下已無採購空間，需調高售價或降低成本假設。</div>';
+    }
+  }
+
+  function recalcAll(){
+    var res = calculate();
+    renderMarket("USD", "US$", res.usd);
+    renderMarket("JPY", "¥", res.jpy);
+    updateFbaNotes();
+  }
+
+  function updateFbaNotes(){
+    var noteUSD = $("note-fbaFeeUSD");
+    var noteJPY = $("note-fbaFeeJPY");
+    var isFBM = state.fulfillmentMode === "FBM";
+    if(noteUSD) noteUSD.textContent = isFBM ? "目前為FBM模式，此費用不會計入試算。" : "";
+    if(noteJPY) noteJPY.textContent = isFBM ? "目前為FBM模式，此費用不會計入試算。" : "";
+  }
+
+  /* ---------- AI engine (比照 restaurant-feasibility-calculator 既有模式) ---------- */
+  var AI_PROVIDERS = {
+    claude:     {label:"Claude（Anthropic）",       defaultModel:"claude-opus-4-8"},
+    openai:     {label:"OpenAI",                    defaultModel:"gpt-4o-mini"},
+    gemini:     {label:"Gemini（Google AI Studio）", defaultModel:"gemini-3.5-flash"},
+    openrouter: {label:"OpenRouter",                defaultModel:"openai/gpt-4o-mini"}
+  };
+
+  function loadApiConfig(){
+    try{ return JSON.parse(localStorage.getItem(API_KEY)) || {}; }catch(e){ return {}; }
+  }
+  function persistApiConfig(){
+    try{
+      localStorage.setItem(API_KEY, JSON.stringify({
+        provider: $("aiProvider").value,
+        model: $("aiModel").value.trim(),
+        apiKey: $("aiKey").value.trim(),
+        extra: $("aiExtra").value
+      }));
+    }catch(e){}
+  }
+
+  var AI_PROMPT_PRESETS = [
+    {id:"pricing", label:"定價健康度", text:"請評估目前美國站與日本站的定價策略是否健康，平台淨利率是否留有足夠緩衝，並指出最大的風險來源。"},
+    {id:"fulfillment", label:"FBM或FBA划算", text:"請比較目前設定下 FBA 與 FBM 兩種出貨模式對利潤的影響，並建議哪一種比較適合這個商品的體積與單價。"},
+    {id:"freight", label:"頭程運費侵蝕", text:"請分析目前的頭程運費占最終採購價格空間的比例，並給出降低運費侵蝕的具體做法（例如併櫃、選擇不同貨運方式）。"},
+    {id:"returnrisk", label:"退貨風險保守估算", text:"請評估目前的退貨風險率假設是否足夠保守，並說明如果實際退貨率比假設高一倍，對採購價格空間的影響。"},
+    {id:"market", label:"美日兩站優先順序", text:"請比較美國站與日本站目前的試算結果，建議應該優先投入資源開發哪個市場，並說明理由。"}
+  ];
+  function buildAiPromptUI(){
+    var row = $("aiPromptRow");
+    row.innerHTML = "";
+    AI_PROMPT_PRESETS.forEach(function(p){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ai-prompt-btn";
+      btn.textContent = p.label;
+      btn.addEventListener("click", function(){
+        $("aiExtra").value = p.text;
+        persistApiConfig();
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  function initAiPanel(){
+    var sel = $("aiProvider");
+    sel.innerHTML = Object.keys(AI_PROVIDERS).map(function(k){
+      return '<option value="' + k + '">' + AI_PROVIDERS[k].label + '</option>';
+    }).join("");
+    var cfg = loadApiConfig();
+    sel.value = (cfg.provider && AI_PROVIDERS[cfg.provider]) ? cfg.provider : "claude";
+    $("aiModel").value = cfg.model || AI_PROVIDERS[sel.value].defaultModel;
+    $("aiKey").value = cfg.apiKey || "";
+    $("aiExtra").value = cfg.extra || "";
+    $("aiExtra").addEventListener("input", persistApiConfig);
+    buildAiPromptUI();
+    sel.addEventListener("change", function(){
+      var modelEl = $("aiModel");
+      var isDefault = Object.keys(AI_PROVIDERS).some(function(k){ return AI_PROVIDERS[k].defaultModel === modelEl.value.trim(); });
+      if(!modelEl.value.trim() || isDefault) modelEl.value = AI_PROVIDERS[sel.value].defaultModel;
+      persistApiConfig();
+    });
+    $("aiModel").addEventListener("input", persistApiConfig);
+    $("aiKey").addEventListener("input", persistApiConfig);
+  }
+
+  async function callLLM(provider, model, apiKey, prompt, onRetry){
+    var url, headers, body, extract;
+    if(provider === "claude"){
+      url = "https://api.anthropic.com/v1/messages";
+      headers = {"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
+      body = {model: model, max_tokens: 2000, messages: [{role:"user", content: prompt}]};
+      extract = function(d){
+        if(d.stop_reason === "refusal") throw new Error("模型拒絕了這個請求（refusal）");
+        var t = (d.content || []).filter(function(b){ return b.type === "text"; }).map(function(b){ return b.text; }).join("");
+        if(!t) throw new Error("回應中沒有文字內容");
+        return t;
+      };
+    } else if(provider === "openai"){
+      url = "https://api.openai.com/v1/chat/completions";
+      headers = {"content-type":"application/json","authorization":"Bearer " + apiKey};
+      body = {model: model, messages: [{role:"user", content: prompt}]};
+      extract = function(d){
+        var t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        if(!t) throw new Error("回應中沒有文字內容");
+        return t;
+      };
+    } else if(provider === "gemini"){
+      url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
+      headers = {"content-type":"application/json","x-goog-api-key":apiKey};
+      body = {contents: [{parts: [{text: prompt}]}]};
+      extract = function(d){
+        var parts = (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || [];
+        var t = parts.map(function(p){ return p.text || ""; }).join("");
+        if(!t) throw new Error("回應中沒有文字內容");
+        return t;
+      };
+    } else if(provider === "openrouter"){
+      url = "https://openrouter.ai/api/v1/chat/completions";
+      headers = {"content-type":"application/json","authorization":"Bearer " + apiKey};
+      body = {model: model, messages: [{role:"user", content: prompt}]};
+      extract = function(d){
+        var t = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        if(!t) throw new Error("回應中沒有文字內容");
+        return t;
+      };
+    } else {
+      throw new Error("不支援的服務商");
+    }
+    var RETRYABLE = {429:1, 500:1, 503:1, 529:1};
+    var MAX_TRIES = 3;
+    for(var attempt = 1; attempt <= MAX_TRIES; attempt++){
+      var resp = await fetch(url, {method:"POST", headers:headers, body:JSON.stringify(body), signal: AbortSignal.timeout(180000)});
+      var raw = await resp.text();
+      if(resp.ok) return extract(JSON.parse(raw));
+      var msg = raw.slice(0, 300);
+      try{ var err = JSON.parse(raw); msg = (err.error && err.error.message) || err.message || msg; }catch(e){}
+      if(RETRYABLE[resp.status] && attempt < MAX_TRIES){
+        var waitSec = attempt * 8;
+        if(onRetry) onRetry(attempt, resp.status, waitSec);
+        await new Promise(function(r){ setTimeout(r, waitSec * 1000); });
+        continue;
+      }
+      if(resp.status === 404) msg += "——這通常表示模型名稱錯誤或已停用，請確認目前可用的模型 ID";
+      if(RETRYABLE[resp.status]) msg += "——已自動重試 " + (MAX_TRIES - 1) + " 次仍失敗，多為服務商暫時過載，請稍候再試或更換模型／服務商";
+      throw new Error("API 回應 " + resp.status + "：" + msg);
+    }
+  }
+
+  function buildDiagnosisPrompt(res, extra){
+    var flags = [];
+    if(marginState(res.usd.profitMarginPct) === "bad") flags.push("美國站平台淨利率 " + fmtPct(res.usd.profitMarginPct) + " 偏低");
+    if(marginState(res.jpy.profitMarginPct) === "bad") flags.push("日本站平台淨利率 " + fmtPct(res.jpy.profitMarginPct) + " 偏低");
+    if(res.usd.minPurchasePriceTWD <= 0) flags.push("美國站在最低margin假設下已無採購空間");
+    if(res.jpy.minPurchasePriceTWD <= 0) flags.push("日本站在最低margin假設下已無採購空間");
+    var lines = [];
+    lines.push("你是一位熟悉跨境電商（Amazon）定價與供應鏈採購的顧問。以下是一個成本試算模型的目前設定與結果，請用繁體中文寫一段診斷（100-150字）加上2-3條具體可執行的建議，語氣專業但直接，不要空泛的理論。");
+    lines.push("出貨模式：" + state.fulfillmentMode + "。");
+    lines.push("美國站：期望售價 US$" + res.usd.price.toFixed(2) + "，平台淨利率 " + fmtPct(res.usd.profitMarginPct)
+      + "，換算台幣扣運費後淨額 NT$" + fmtInt(res.usd.afterFreightTWD)
+      + "，建議採購價格區間 NT$" + fmtInt(res.usd.minPurchasePriceTWD) + " ~ NT$" + fmtInt(res.usd.maxPurchasePriceTWD) + "。");
+    lines.push("日本站：期望售價 ¥" + fmtInt(res.jpy.price) + "，平台淨利率 " + fmtPct(res.jpy.profitMarginPct)
+      + "，換算台幣扣運費後淨額 NT$" + fmtInt(res.jpy.afterFreightTWD)
+      + "，建議採購價格區間 NT$" + fmtInt(res.jpy.minPurchasePriceTWD) + " ~ NT$" + fmtInt(res.jpy.maxPurchasePriceTWD) + "。");
+    if(flags.length) lines.push("目前需要留意的風險項目：" + flags.join("；") + "。");
+    else lines.push("目前兩個市場的淨利率都落在健康區間內。");
+    if(extra && extra.trim()) lines.push("特別要求：" + extra.trim());
+    return lines.join("\n");
+  }
+
+  function ruleBasedDiagnosis(res){
+    var sentences = [];
+    ["usd","jpy"].forEach(function(k){
+      var label = k === "usd" ? "美國站" : "日本站";
+      var r = res[k];
+      var ms = marginState(r.profitMarginPct);
+      if(ms === "bad"){
+        sentences.push(label + "平台淨利率僅 " + fmtPct(r.profitMarginPct) + "，偏低，建議檢視售價、平台手續費率或成本假設是否合理。");
+      } else if(ms === "warn"){
+        sentences.push(label + "平台淨利率 " + fmtPct(r.profitMarginPct) + "，尚可但不算寬裕，建議留意退貨與匯率波動的緩衝空間。");
+      } else {
+        sentences.push(label + "平台淨利率 " + fmtPct(r.profitMarginPct) + "，屬於健康水準。");
+      }
+      if(r.minPurchasePriceTWD <= 0){
+        sentences.push(label + "在最低margin假設下已經沒有採購空間，需調高售價或降低頭程運費／成本假設。");
+      } else {
+        sentences.push(label + "建議採購價格區間約為 NT$" + fmtInt(r.minPurchasePriceTWD) + " ~ NT$" + fmtInt(r.maxPurchasePriceTWD) + "，可作為與供應商議價的參考範圍。");
+      }
+    });
+    sentences.push("目前出貨模式為 " + state.fulfillmentMode + "；若商品體積大或單價高，FBM自行出貨通常能省下FBA費用，但頭程與末端物流的規劃責任會轉移到賣家自己身上。");
+    return sentences.join("\n\n");
+  }
+
+  function showAiStatus(kind, msg){
+    var el = $("aiStatus");
+    el.className = "ai-status status-" + kind;
+    el.textContent = msg;
+  }
+  function showAiResult(text, mode){
+    var box = $("aiResult");
+    box.classList.add("show");
+    $("aiResultText").textContent = text;
+    var badge = $("aiBadge");
+    badge.className = "ai-badge " + (mode==="ai" ? "mode-ai":"mode-rule");
+    badge.textContent = mode==="ai" ? "AI 生成診斷" : "規則式健檢";
+  }
+
+  function runRuleDiagnosis(){
+    var res = calculate();
+    showAiResult(ruleBasedDiagnosis(res), "rule");
+    showAiStatus("info", "已使用規則式健檢（不需 API 金鑰）。");
+  }
+
+  async function runAiDiagnosis(){
+    var provider = $("aiProvider").value;
+    var model = $("aiModel").value.trim();
+    var apiKey = $("aiKey").value.trim();
+    var res = calculate();
+    if(!apiKey){
+      showAiStatus("info", "尚未填寫 API 金鑰，已改用規則式健檢。");
+      showAiResult(ruleBasedDiagnosis(res), "rule");
+      return;
+    }
+    var btn = $("aiDiagnoseBtn");
+    btn.disabled = true;
+    showAiStatus("info", "AI 診斷生成中…");
+    try{
+      var prompt = buildDiagnosisPrompt(res, $("aiExtra").value);
+      var text = await callLLM(provider, model, apiKey, prompt, function(attempt, status, waitSec){
+        showAiStatus("info", "服務商回應 " + status + "，" + waitSec + " 秒後自動重試（第 " + attempt + " 次）…");
+      });
+      showAiResult(text.trim(), "ai");
+      showAiStatus("ok", "AI 診斷已完成。");
+    }catch(e){
+      showAiStatus("err", "AI 生成失敗（" + e.message + "），已改用規則式健檢。");
+      showAiResult(ruleBasedDiagnosis(res), "rule");
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  /* ---------- Reset ---------- */
+  function resetToDefaults(){
+    VAR_DEFS.forEach(function(v){ state[v.id] = v.def; });
+    state.fulfillmentMode = "FBA";
+    activePresetId = null;
+    persistState();
+    syncAllInputs();
+    syncModeUI();
+    syncPresetActiveUI();
+    recalcAll();
+  }
+
+  /* ---------- Init ---------- */
+  loadState();
+  buildModeUI();
+  buildGrids();
+  buildPresetUI();
+  syncAllInputs();
+  bindFreightTool("USD", "freightPerUnitUSD");
+  bindFreightTool("JPY", "freightPerUnitJPY");
+  initAiPanel();
+  recalcAll();
+
+  $("aiDiagnoseBtn").addEventListener("click", runAiDiagnosis);
+  $("ruleDiagnoseBtn").addEventListener("click", runRuleDiagnosis);
+  $("resetBtn").addEventListener("click", resetToDefaults);
+})();
+</script>
+</body>
+</html>
