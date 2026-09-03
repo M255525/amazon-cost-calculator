@@ -1,0 +1,16 @@
+{
+  "name": "Amazon 成本分析計算機",
+  "short_name": "Amazon成本試算",
+  "description": "調整售價、平台手續費、FBA費用與運費，即時試算跨境電商採購成本與定價策略",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F5EF",
+  "theme_color": "#0B1220",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

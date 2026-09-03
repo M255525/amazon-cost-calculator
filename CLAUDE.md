@@ -21,7 +21,7 @@
 
 - `VAR_DEFS` — 變數定義陣列，`group` 分三類：`global`（安全margin，兩個市場共用）／`usd`／`jpy`。`buildGrids()` 依 group 分別塞進 `#globalGrid`／`#varGridUSD`／`#varGridJPY` 三個容器（不像 restaurant 版有 tab 切換，因為此工具刻意讓美日兩站並排同時可見，對應 Excel 原始的雙欄並列結構）。
 - `state.fulfillmentMode`（`"FBA"`/`"FBM"`）— 獨立於 VAR_DEFS 之外的全域切換，`buildModeUI()`／`syncModeUI()` 管理；FBM 模式下 `calcMarket()` 會把兩個市場的 `fbaFeeApplied` 都清零，並在 FBA費用滑桿下方顯示提示文字（`updateFbaNotes()`）。
-- `PRESETS` — 5 組虛構品類範例（居家收納／3C配件／戶外露營／寵物用品／美妝保養），`applyPreset()` 覆寫 `state` 後重算，比照 restaurant 版的 `Object.assign` 風格。
+- `PRESETS` — 6 組虛構品類範例（居家收納／3C配件／戶外露營／寵物用品／美妝保養／食品零食，2026-09-03 應使用者要求補上食品類），`applyPreset()` 覆寫 `state` 後重算，比照 restaurant 版的 `Object.assign` 風格。
 - `calcMarket(price, platformFeeRate, fbaFee, localFeeRate, returnRiskRate, paymentFeeRate, exchangeRate, freightPerUnitTWD, highMarginPct, lowMarginPct, fulfillmentMode)` — 核心計算引擎，USD/JPY 各呼叫一次；`calculate()` 回傳 `{usd, jpy}`。
 - `renderMarket(prefix, currencyLabel, res)` — 把單一市場的計算結果畫成瀑布式帳本（`.ledger` / `ledger-row`）＋最高/最低採購價格卡片＋淨利率徽章（`marginState()` 三段判色：≥20% good／10-20% warn／<10% bad）＋警示訊息（`afterFreightTWD<=0` 或 `minPurchasePriceTWD<=0` 時顯示紅色警告）。
 - 頭程運費小工具（`bindFreightTool()`）— 每個市場一組「總運費(TWD) ÷ 件數」輸入框＋按鈕，計算後直接寫回對應的 `freightPerUnitUSD`/`freightPerUnitJPY` 滑桿與 state，對應 Excel 的 I18/K18 輔助算法；這兩組輸入框本身不存進 `state`/localStorage（純計算小工具，不是正式變數）。
@@ -37,9 +37,17 @@
 
 「重設為基準假設」（`resetToDefaults()`）只重設 `VAR_DEFS`／`fulfillmentMode`／`activePresetId` 並改寫 `amazonCostCalcState`，不動 `amazonCostCalcApiConfig`——AI 設定不隨重設清除，與 restaurant 版慣例一致。
 
-## 本次範圍刻意不做的功能
+## 週邊功能（2026-09-03 補齊，逐字比照 restaurant-feasibility-calculator 已驗證的實作）
 
-比照使用者明確決定的範圍（先做核心試算＋AI診斷），以下功能**目前沒有**，之後有需要再個別評估要不要加：PDF匯出、頂部跑馬燈、`manual.html` 操作手冊、PWA加入主畫面、訪客計數器、互動平面圖類的 signature 視覺元素、可攜式桌面版 exe。
+- **PDF匯出**（`#pdfExportBtn`）— 走「獨立靜態報表」路線，不是把互動版UI硬掰成可列印：`buildPrintReport()` 用目前 `state`／`calculate()` 現組一份純靜態 HTML（共用假設表＋美國站/日本站各自完整瀑布帳本＋若曾產生過的AI診斷結果）塞進 `#printReportRoot`，`@media print` 只把 `#printReportRoot`／`#pdfWatermark` 設回可見（`body>*{display:none!important}`，不可用 `visibility:hidden`，會佔位生出空白頁）。所有動態文字皆過 `escapeHtml()`。`buildLedgerRows(prefix, currencyLabel, res)` 是 `renderMarket()` 與 `buildPrintReport()` 共用的資料來源，避免瀑布列表定義重複一份。浮水印 `#pdfWatermark img#wmImg` 的 base64 data URI 直接複用 `restaurant-feasibility-calculator/index.html` 裡的同一張「馬克老師」品牌圖（用 Python 腳本字串替換注入檔案，沒有經過對話視窗）。
+- **頂部跑馬燈** — 獨立 IIFE，`MARQUEE_CHECK_URL` 沿用工作區共用的同一顆 Google Apps Script 端點，localStorage key 為 `amazonCostCalcMarquee`；本頁是一般頁面（無 100vh flex 殼層、無 sticky 標頭、無鎖定遮罩），故用最簡單的 `position:fixed` 橫條＋`body.has-marquee{padding-top:30px}`，比照 shared-widget-rollout skill 的版面判斷表。
+- **`manual.html`** — 獨立頁面，內容依本工具操作流程改寫（出貨模式/品類範例/共用margin/瀑布帳本/頭程運費小工具/AI診斷角度），創作者資料區塊逐字比照 restaurant-feasibility-calculator 等姊妹專案。
+- **PWA** — `manifest.json`＋`service-worker.js`（network-first＋同源快取備援）＋`icons/`（PIL 產生，深藍底 `#0B1220`＋Amazon橘 `#FF9900` 的 `$` 符號，192/512/maskable-512/apple-touch-icon 四種尺寸，產生腳本未進 repo）；安裝按鈕 `#installBtn`＋`#toast`＋沿用已修好 bug 的安裝腳本（[[pwa-install-rollout]] 記載的兩個踩坑：腳本執行時機須晚於按鈕元素解析、`notify()` 自帶避免跨作用域抓不到 `showToast`）。
+- **訪客計數器** — `visitor-badge.laobi.icu`，`page_id=m255525.amazoncostcalculator`，放 footer。
+
+開發時用 Playwright 驗證過：PDF報告內容正確生成（含美國站/日本站/共用假設/浮水印 data URI）、跑馬燈實際抓到共用端點內容並正確渲染、安裝按鈕與訪客badge元素存在。**注意**：`window.print()` 在無頭瀏覽器（headless）測試環境會卡住等待列印對話框，測試 `#pdfExportBtn` 前務必先 stub `window.print = function(){}` 再觸發點擊，否則會讓 Playwright 分頁卡死甚至 crash（已實際踩過一次）。
+
+仍未做（超出本次要求範圍，之後有需要再評估）：互動平面圖類的 signature 視覺元素、可攜式桌面版 exe、序號授權。
 
 ## 指令
 
