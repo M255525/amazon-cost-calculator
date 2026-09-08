@@ -4,7 +4,7 @@
 
 ## 這是什麼
 
-**Amazon 跨境電商成本分析計算機**，單檔前端、無後端、無序號授權。來源是使用者提供的參考檔 `C:\Users\mark_\SynologyDrive\簡報資料\2023\輔仁大學\h2\參考資料\AMAZON-3-成本分析表.xlsx`（「Amazon平台賣價推估售價對應成本計算表」，分 FBM型／FBA型 兩張工作表，各自平行計算 USD／JPY 欄位），2026-09-03 依使用者要求做成互動網站，型態仿 `資料儀表板/restaurant-feasibility-calculator`（即時試算＋健康帶判色＋內建範例＋BYOK AI診斷）。
+**Amazon 跨境電商成本分析計算機**，單檔前端、無後端。來源是使用者提供的參考檔 `C:\Users\mark_\SynologyDrive\簡報資料\2023\輔仁大學\h2\參考資料\AMAZON-3-成本分析表.xlsx`（「Amazon平台賣價推估售價對應成本計算表」，分 FBM型／FBA型 兩張工作表，各自平行計算 USD／JPY 欄位），2026-09-03 依使用者要求做成互動網站，型態仿 `資料儀表板/restaurant-feasibility-calculator`（即時試算＋健康帶判色＋內建範例＋BYOK AI診斷）。
 
 來源 Excel 標註「資料來源：展貿科技有限公司」屬於真實公司的營運參數，只沿用其計算方法論，內建範例已全部改為虛構品類，不含真實公司名稱或數字。2026-09-03 應使用者要求推公開 GitHub repo 並上線 GitHub Pages：<https://m255525.github.io/amazon-cost-calculator/>。
 
@@ -47,7 +47,15 @@
 
 開發時用 Playwright 驗證過：PDF報告內容正確生成（含美國站/日本站/共用假設/浮水印 data URI）、跑馬燈實際抓到共用端點內容並正確渲染、安裝按鈕與訪客badge元素存在。**注意**：`window.print()` 在無頭瀏覽器（headless）測試環境會卡住等待列印對話框，測試 `#pdfExportBtn` 前務必先 stub `window.print = function(){}` 再觸發點擊，否則會讓 Playwright 分頁卡死甚至 crash（已實際踩過一次）。
 
-仍未做（超出本次要求範圍，之後有需要再評估）：互動平面圖類的 signature 視覺元素、可攜式桌面版 exe、序號授權。
+仍未做（超出本次要求範圍，之後有需要再評估）：互動平面圖類的 signature 視覺元素、可攜式桌面版 exe。
+
+## 序號授權（鎖定整個工具，12 個月，2026-09-08 新增）
+
+比照 `行銷內容工具/amazon-listing-generator` 的模式：`#licenseGate` 全螢幕遮罩預設鎖定，驗證通過才加上 `.hidden`；載入時一律對後端即時重驗，背景每 20 分鐘重驗一次。`localStorage` key：`amazonCostCalcSerial`。徽章放在 `.hero-utility`（本工具沒有持續顯示的 topbar，改用 hero 區塊右上角的工具列）。
+
+- **綁定的 Google Sheet**：使用者指定沿用 `product-title-generator`／`amazon-listing-generator` 共用的既有表 <https://docs.google.com/spreadsheets/d/1pqGlCvUstowBzZh7J4xEa0jy3KoK4UeHUiyMTzcSGo4/edit>。`Code.gs` 固定操作獨立分頁「AmazonCost序號」（`SHEET_NAME` 常數），不做跨分頁掃描比對；分頁不存在時 `getLicenseSheet_()` 會自動 `insertSheet()` 並寫入表頭。
+- **部署方式**：`clasp create --parentId <SheetID>`（不加 `--type`）→ 複製 `Code.gs` → `appsscript.json` 加 `webapp:{executeAs:"USER_DEPLOYING",access:"ANYONE_ANONYMOUS"}` → `clasp push --force` → `clasp deploy`，全程在 `.gas-deploy/`（已加入 `.gitignore`，不進版控）內操作。已部署：`LICENSE_CHECK_URL = https://script.google.com/macros/s/AKfycbx67ik9E7OwKBSfLj6qS5YTCJDk3ucELVG78M-xp8m338BZJhmvnqzsYFFkAVK74xVqIg/exec`，Apps Script 編輯器：<https://script.google.com/d/1KZp-W_VxXBUVXnGCEBHE_3pX1QCB75gYIgSWgGMCLw5OZ-zQDkzLb9WY/edit>。
+- **⚠️ 尚待使用者完成一次性 OAuth 授權**：`doGet` 目前回應的是 Google 帳號授權頁（尚未完成首次同意流程），前端 `licenseGate` 會顯示「無法連線授權伺服器」。需使用者親自用瀏覽器開啟 Apps Script 編輯器執行一次 `doGet` 並完成「進階 > 前往（不安全）」的同意畫面，或直接開啟上述 exec 網址並完成同意流程，之後才能正式驗證序號。
 
 ## 手機版調整（2026-09-03）
 
