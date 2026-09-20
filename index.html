@@ -72,6 +72,11 @@ section.alt{background:#fff;}
 /* ---------- Presets ---------- */
 .preset-lead{font-size:.9rem;color:var(--ink-soft);margin:0 0 14px;max-width:56em;}
 .preset-row{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;margin-bottom:8px;}
+.identity-fields{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.identity-fields label{display:block;font-family:var(--font-heading);font-weight:700;font-size:.82rem;color:var(--ink);margin-bottom:5px;}
+.identity-fields input{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:6px;font-family:var(--font-body);font-size:.88rem;color:var(--ink);background:#fff;}
+.identity-hint{font-size:.76rem;color:#9A947F;margin:10px 0 0;}
+@media (max-width:640px){.identity-fields{grid-template-columns:1fr 1fr;}}
 .preset-btn{flex:0 0 auto;width:186px;display:flex;flex-direction:column;gap:5px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:13px 14px;cursor:pointer;font-family:var(--font-body);}
 .preset-btn:hover{border-color:var(--amazon);}
 .preset-btn.active{border-color:var(--amazon);box-shadow:0 0 0 2px rgba(255,153,0,.28);background:#FFFAF0;}
@@ -307,6 +312,23 @@ body.has-marquee{padding-top:30px;}
   </div>
 </section>
 
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="kicker">Practice Certificate</p>
+      <h2>身分資料（選填，練習證明用）</h2>
+      <p>填寫後可在下方按「🎓 下載練習證明」，產生一張含身分資料的 PNG 圖片存證；只存在你自己瀏覽器的 localStorage，不會上傳到任何伺服器，非課程練習用途可不填。</p>
+    </div>
+    <div class="identity-fields">
+      <div><label for="idName">姓名</label><input type="text" id="idName" maxlength="40" placeholder="例如：王小明"></div>
+      <div><label for="idStudentId">學號</label><input type="text" id="idStudentId" maxlength="30" placeholder="選填"></div>
+      <div><label for="idDept">系所</label><input type="text" id="idDept" maxlength="40" placeholder="選填"></div>
+      <div><label for="idGroup">組別</label><input type="text" id="idGroup" maxlength="30" placeholder="選填"></div>
+    </div>
+    <p class="identity-hint"><button type="button" class="hero-util-btn" id="certExportBtn" style="margin-top:14px;">🎓 下載練習證明</button></p>
+  </div>
+</section>
+
 <section class="alt">
   <div class="wrap">
     <div class="section-head">
@@ -411,7 +433,7 @@ body.has-marquee{padding-top:30px;}
 <footer>
   <div class="wrap">
     <div class="disclaimer">
-      <strong>使用警語：</strong>本工具僅供跨境電商定價與採購成本的初步試算參考，所有數字皆為依你目前設定推算的估計值，非正式財務報表或專業意見，不能取代會計師、稅務顧問或實際供應鏈報價。變數設定、AI 診斷內容與 API 金鑰皆只存在你的瀏覽器本機，不會上傳到任何伺服器；填入 API 金鑰並按下「請 AI 診斷」時，你的試算資料會直接送到你選擇的服務商官方 API。內建範例皆為虛構情境，非真實客戶資料。完整使用說明與創作者資料請見<a href="manual.html" style="color:#A9B7D1;">操作手冊</a>。
+      <strong>使用警語：</strong>本工具僅供跨境電商定價與採購成本的初步試算參考，所有數字皆為依你目前設定推算的估計值，非正式財務報表或專業意見，不能取代會計師、稅務顧問或實際供應鏈報價。變數設定、AI 診斷內容與 API 金鑰皆只存在你的瀏覽器本機，不會上傳到任何伺服器；填入 API 金鑰並按下「請 AI 診斷」時，你的試算資料會直接送到你選擇的服務商官方 API。「姓名／學號／系所／組別」為選填欄位，僅用於你自行下載的練習證明圖檔，同樣只存在你的瀏覽器本機。內建範例皆為虛構情境，非真實客戶資料。完整使用說明與創作者資料請見<a href="manual.html" style="color:#A9B7D1;">操作手冊</a>。
     </div>
     <div class="footer-row">
       <span>製作：Mark Tsai｜<a href="mailto:tsaimark@gmail.com" style="color:#A9B7D1;">tsaimark@gmail.com</a></span>
@@ -1073,6 +1095,101 @@ body.has-marquee{padding-top:30px;}
 
     $("printReportRoot").innerHTML = html;
   }
+
+  /* ---------- 身分資料與練習證明（PNG 圖檔，Canvas 繪製） ---------- */
+  var IDENTITY_KEY = "amazonCostCalcIdentity";
+  function loadIdentity(){
+    try{ return JSON.parse(localStorage.getItem(IDENTITY_KEY) || "{}"); }catch(e){ return {}; }
+  }
+  function saveIdentity(){
+    var d = { name: $("idName").value, studentId: $("idStudentId").value, dept: $("idDept").value, group: $("idGroup").value };
+    try{ localStorage.setItem(IDENTITY_KEY, JSON.stringify(d)); }catch(e){}
+  }
+  function restoreIdentity(){
+    var d = loadIdentity();
+    $("idName").value = d.name || ""; $("idStudentId").value = d.studentId || "";
+    $("idDept").value = d.dept || ""; $("idGroup").value = d.group || "";
+  }
+  function wrapCanvasText(ctx, text, maxWidth){
+    var lines = [], line = "";
+    for(var i = 0; i < text.length; i++){
+      var test = line + text[i];
+      if(ctx.measureText(test).width > maxWidth && line){ lines.push(line); line = text[i]; }
+      else line = test;
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+  function downloadPracticeCertificate(){
+    var name = $("idName").value.trim(), sid = $("idStudentId").value.trim();
+    var dept = $("idDept").value.trim(), group = $("idGroup").value.trim();
+    var res = calculate();
+    var d = new Date();
+    var dateStr = d.getFullYear() + "/" + String(d.getMonth()+1).padStart(2,"0") + "/" + String(d.getDate()).padStart(2,"0");
+
+    var W = 1000, H = 700;
+    var canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#0B1220"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "#FF9900"; ctx.lineWidth = 3; ctx.strokeRect(24, 24, W-48, H-48);
+    ctx.strokeStyle = "rgba(255,153,0,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(34, 34, W-68, H-68);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FF9900";
+    ctx.font = "bold 20px \"Microsoft JhengHei\", sans-serif";
+    ctx.fillText("PRACTICE CERTIFICATE", W/2, 90);
+    ctx.fillStyle = "#F7F5EF";
+    ctx.font = "bold 34px \"Microsoft JhengHei\", sans-serif";
+    ctx.fillText("練習證明", W/2, 138);
+    ctx.font = "18px \"Microsoft JhengHei\", sans-serif";
+    ctx.fillStyle = "#C7CEDD";
+    ctx.fillText("Amazon 成本分析計算機", W/2, 170);
+
+    ctx.strokeStyle = "rgba(255,153,0,0.4)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(120, 196); ctx.lineTo(W-120, 196); ctx.stroke();
+
+    var y = 246, lineH = 40;
+    ctx.font = "20px \"Microsoft JhengHei\", sans-serif";
+    function row(label, value){
+      ctx.textAlign = "right"; ctx.fillStyle = "#8892A6";
+      ctx.fillText(label, W/2 - 16, y);
+      ctx.textAlign = "left"; ctx.fillStyle = "#F7F5EF";
+      ctx.fillText(value || "（未填寫）", W/2, y);
+      y += lineH;
+    }
+    row("姓名：", name); row("學號：", sid); row("系所：", dept); row("組別：", group);
+
+    y += 14;
+    ctx.textAlign = "center";
+    ctx.font = "16px \"Microsoft JhengHei\", sans-serif";
+    ctx.fillStyle = "#8892A6";
+    var summary = "已完成試算：美國站建議採購價 NT$" + fmtInt(res.usd.minPurchasePriceTWD) + "~" + fmtInt(res.usd.maxPurchasePriceTWD)
+      + "，日本站 NT$" + fmtInt(res.jpy.minPurchasePriceTWD) + "~" + fmtInt(res.jpy.maxPurchasePriceTWD);
+    wrapCanvasText(ctx, summary, W-200).forEach(function(ln){ ctx.fillText(ln, W/2, y); y += 26; });
+    y += 8;
+    ctx.fillText("產出日期：" + dateStr, W/2, y);
+
+    ctx.font = "12px \"Microsoft JhengHei\", sans-serif";
+    ctx.fillStyle = "#5B6478";
+    ctx.fillText("本證明由使用者自行下載，僅供課程練習存證使用，非官方發行文件", W/2, H-50);
+    ctx.fillText("Amazon 成本分析計算機 · Mark Tsai", W/2, H-30);
+
+    canvas.toBlob(function(blob){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      var stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+      a.href = url; a.download = "練習證明_" + (name || "未填寫姓名") + "_" + stamp + ".png";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+  ["idName","idStudentId","idDept","idGroup"].forEach(function(id){
+    $(id).addEventListener("input", saveIdentity);
+  });
+  $("certExportBtn").addEventListener("click", downloadPracticeCertificate);
+  restoreIdentity();
 
   /* ---------- Init ---------- */
   loadState();
